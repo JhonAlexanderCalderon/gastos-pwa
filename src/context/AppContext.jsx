@@ -8,6 +8,7 @@ import {
   watchRecurring, applyRecurringExpense, addExpense,
 } from '../firebase/firestore'
 import { monthKey } from '../utils/balance'
+import { CURRENCIES } from '../utils/currency'
 
 const Ctx = createContext(null)
 
@@ -51,6 +52,19 @@ export function AppProvider({ children }) {
       updateCouple(couple.id, { [mySlot]: appUser.photoUrl })
     }
   }, [couple, appUser?.uid, appUser?.photoUrl])
+
+  // Self-heal a stale currency (e.g. couples created before the currency
+  // list was trimmed to AUD/COP). The Settings dropdown can't be trusted
+  // to fix this on its own: a <select> whose stored value isn't one of
+  // its options silently falls back to showing the first option without
+  // ever firing onChange, so the user sees "AUD" and has no reason to
+  // touch it while the stored value is still the stale one underneath.
+  useEffect(() => {
+    if (!couple?.id) return
+    if (!CURRENCIES.some(c => c.code === couple.currency)) {
+      updateCouple(couple.id, { currency: 'AUD' })
+    }
+  }, [couple])
 
   // Watch scheduled/recurring expense templates
   useEffect(() => {
