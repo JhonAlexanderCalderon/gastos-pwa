@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, Copy, Plus, Trash2 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
-import { saveUser, saveRecurring, deleteRecurring } from '../firebase/firestore'
+import { saveUser, saveRecurring, deleteRecurring, updateCoupleCurrency } from '../firebase/firestore'
 import { BottomNav } from '../components/BottomNav'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -43,7 +43,11 @@ export function SettingsPage() {
   }
 
   async function handleCurrencyChange(e) {
-    await saveUser({ uid: appUser.uid, currency: e.target.value })
+    const value = e.target.value
+    await saveUser({ uid: appUser.uid, currency: value })
+    // couple.currency is what's actually used to format amounts app-wide,
+    // so it must be kept in sync too (not just the personal fallback).
+    if (couple?.id) await updateCoupleCurrency(couple.id, value)
   }
 
   function copyCode() {
@@ -136,9 +140,9 @@ export function SettingsPage() {
 
         {/* Currency */}
         <Card className="p-5">
-          <p className="text-xs text-gray-400 mb-2">Moneda</p>
+          <p className="text-xs text-gray-400 mb-2">{couple ? 'Moneda de la pareja' : 'Moneda'}</p>
           <select
-            defaultValue={appUser?.currency ?? 'AUD'}
+            defaultValue={currency}
             onChange={handleCurrencyChange}
             className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-amber-500"
           >

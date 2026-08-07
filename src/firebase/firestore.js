@@ -73,6 +73,10 @@ export function watchCouple(coupleId, cb) {
   )
 }
 
+export function updateCoupleCurrency(coupleId, currency) {
+  return updateDoc(doc(db, 'couples', coupleId), { currency })
+}
+
 // ─── EXPENSES ─────────────────────────────────────────────
 
 export async function addExpense(expense) {
