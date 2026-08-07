@@ -1,0 +1,67 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users can only read/write their own profile
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Couples: only members can read/write
+    match /couples/{coupleId} {
+      allow read: if request.auth != null &&
+        (resource.data.user1Id == request.auth.uid ||
+         resource.data.user2Id == request.auth.uid);
+
+      // Create: authenticated user sets themselves as user1
+      allow create: if request.auth != null &&
+        request.resource.data.user1Id == request.auth.uid &&
+        request.resource.data.user2Id == '';
+
+      // Update: join (setting user2Id) or member update
+      allow update: if request.auth != null && (
+        // Joining the couple
+        (resource.data.user2Id == '' &&
+         request.resource.data.user2Id == request.auth.uid) ||
+        // Existing member updating
+        (resource.data.user1Id == request.auth.uid ||
+         resource.data.user2Id == request.auth.uid)
+      );
+
+      // Expenses sub-collection: only couple members
+      match /expenses/{expenseId} {
+        allow read, delete: if request.auth != null && isCoupleMember(coupleId);
+        // paidBy can be either member — recurring/quick-pay expenses can be
+        // triggered from either partner's device on behalf of the payer.
+        allow create: if request.auth != null &&
+          isCoupleMember(coupleId) &&
+          isValidPayer(coupleId, request.resource.data.paidBy);
+        // Needed for the idempotent recurring-expense write (same
+        // deterministic id retried) to not fail once the doc exists.
+        allow update: if request.auth != null && isCoupleMember(coupleId);
+      }
+
+      // Settlements: only couple members
+      match /settlements/{month} {
+        allow read, write: if request.auth != null && isCoupleMember(coupleId);
+      }
+
+      // Scheduled/recurring expense templates: only couple members
+      match /recurring/{recurringId} {
+        allow read, write: if request.auth != null && isCoupleMember(coupleId);
+      }
+    }
+
+    function isCoupleMember(coupleId) {
+      let couple = get(/databases/$(database)/documents/couples/$(coupleId));
+      return couple.data.user1Id == request.auth.uid ||
+             couple.data.user2Id == request.auth.uid;
+    }
+
+    function isValidPayer(coupleId, payerId) {
+      let couple = get(/databases/$(database)/documents/couples/$(coupleId));
+      return payerId == couple.data.user1Id || payerId == couple.data.user2Id;
+    }
+  }
+}
