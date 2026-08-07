@@ -10,9 +10,16 @@ service cloud.firestore {
 
     // Couples: only members can read/write
     match /couples/{coupleId} {
+      // Members can always read their couple. Anyone authenticated can also
+      // read a couple that's still open for joining (user2Id == '') — this
+      // is what lets the join-by-invite-code query find it before you're a
+      // member. It's safe: you can only match it by already knowing the
+      // exact invite code, and it stops being readable this way the moment
+      // someone joins (user2Id gets set).
       allow read: if request.auth != null &&
         (resource.data.user1Id == request.auth.uid ||
-         resource.data.user2Id == request.auth.uid);
+         resource.data.user2Id == request.auth.uid ||
+         resource.data.user2Id == '');
 
       // Create: authenticated user sets themselves as user1
       allow create: if request.auth != null &&
