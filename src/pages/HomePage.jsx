@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ChevronLeft, ChevronRight, Plus, Check, Inbox } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { watchMonthExpenses } from '../firebase/firestore'
 import { BottomNav } from '../components/BottomNav'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
-import { getCategoryById } from '../utils/categories'
+import { CategoryIcon } from '../components/ui/CategoryIcon'
+import { getCategoryById, CATEGORIES } from '../utils/categories'
 import { formatAmount } from '../utils/currency'
 import { calcBalance, monthKey, monthLabel, prevMonth, nextMonth } from '../utils/balance'
+
+const QUICK_ADD_IDS = ['aldi', 'coles', 'woolworths', 'gasolina', 'otro']
 
 function BalanceCard({ status, diff, currency }) {
   const configs = {
@@ -32,10 +36,11 @@ function BalanceCard({ status, diff, currency }) {
 }
 
 export function HomePage() {
-  const { appUser, couple } = useApp()
+  const { appUser, couple, recurring, payRecurringNow } = useApp()
   const navigate = useNavigate()
   const [month, setMonth] = useState(monthKey())
   const [expenses, setExpenses] = useState([])
+  const [justPaid, setJustPaid] = useState(null)
 
   useEffect(() => {
     if (!couple?.id) return
@@ -43,9 +48,16 @@ export function HomePage() {
   }, [couple?.id, month])
 
   const balance = calcBalance(expenses, appUser?.uid)
-  const currency = couple?.currency ?? appUser?.currency ?? 'MXN'
+  const currency = couple?.currency ?? appUser?.currency ?? 'AUD'
   const partnerName = couple?.user1Id === appUser?.uid ? couple?.user2Name : couple?.user1Name
   const isCurrentMonth = month === monthKey()
+  const quickCategories = QUICK_ADD_IDS.map(id => CATEGORIES.find(c => c.id === id)).filter(Boolean)
+
+  async function handleQuickPay(r) {
+    await payRecurringNow(r)
+    setJustPaid(r.id)
+    setTimeout(() => setJustPaid(null), 1500)
+  }
 
   // Group recent expenses by date
   const recent = expenses.slice(0, 10)
@@ -62,20 +74,24 @@ export function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
       {/* Header */}
-      <div className="bg-violet-700 text-white px-5 pt-12 pb-6">
-        <p className="text-violet-200 text-sm">{greeting}</p>
+      <div className="bg-white border-b border-gray-100 px-5 pt-12 pb-5">
+        <p className="text-gray-400 text-sm">{greeting}</p>
         <div className="flex items-center justify-between mt-1">
-          <button onClick={() => setMonth(prevMonth(month))} className="text-violet-200 text-xl p-1">‹</button>
-          <h2 className="text-lg font-semibold capitalize">{monthLabel(month)}</h2>
+          <button onClick={() => setMonth(prevMonth(month))} className="text-amber-600 p-1">
+            <ChevronLeft size={22} />
+          </button>
+          <h2 className="text-lg font-semibold text-gray-900 capitalize">{monthLabel(month)}</h2>
           <button
             onClick={() => setMonth(nextMonth(month))}
             disabled={isCurrentMonth}
-            className="text-violet-200 text-xl p-1 disabled:opacity-30"
-          >›</button>
+            className="text-amber-600 p-1 disabled:opacity-30"
+          >
+            <ChevronRight size={22} />
+          </button>
         </div>
       </div>
 
-      <div className="px-4 -mt-4 flex flex-col gap-4">
+      <div className="px-4 pt-4 flex flex-col gap-4">
         {/* Balance */}
         <BalanceCard status={balance.status} diff={balance.diff} currency={currency} />
 
@@ -93,8 +109,58 @@ export function HomePage() {
 
         {/* Add expense */}
         <Button onClick={() => navigate('/add-expense')} className="w-full">
-          + Agregar gasto
+          <Plus size={18} /> Agregar gasto
         </Button>
+
+        {/* Quick access shortcuts */}
+        <div>
+          <p className="text-sm font-semibold text-gray-500 mb-2 px-1">Accesos rápidos</p>
+          <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
+            {quickCategories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => navigate(`/add-expense?cat=${cat.id}`)}
+                className="flex flex-col items-center gap-1 min-w-[64px]"
+              >
+                <CategoryIcon category={cat} size={48} />
+                <span className="text-xs text-gray-600 text-center truncate w-full">{cat.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Recurring quick pay */}
+        {recurring.filter(r => r.active).length > 0 && (
+          <div>
+            <p className="text-sm font-semibold text-gray-500 mb-2 px-1">Pagos rápidos</p>
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              {recurring.filter(r => r.active).map(r => {
+                const cat = getCategoryById(r.category)
+                const paid = justPaid === r.id
+                return (
+                  <button
+                    key={r.id}
+                    onClick={() => handleQuickPay(r)}
+                    disabled={paid}
+                    className={`flex items-center gap-2 min-w-fit pl-2 pr-3 py-2 rounded-2xl border transition-colors ${paid ? 'bg-green-50 border-green-200' : 'bg-white border-gray-100'}`}
+                  >
+                    {paid ? (
+                      <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                        <Check size={18} color="#15803d" />
+                      </div>
+                    ) : (
+                      <CategoryIcon category={cat} size={36} />
+                    )}
+                    <div className="text-left">
+                      <p className="text-xs font-medium text-gray-900 leading-tight">{r.label || cat.label}</p>
+                      <p className="text-xs text-gray-400 leading-tight">{formatAmount(r.amount, currency)}</p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Recent expenses */}
         {Object.keys(grouped).length > 0 ? (
@@ -109,7 +175,7 @@ export function HomePage() {
                     const isOwn = e.paidBy === appUser?.uid
                     return (
                       <div key={e.id} className={`flex items-center gap-3 px-4 py-3 ${i < items.length - 1 ? 'border-b border-gray-50' : ''}`}>
-                        <span className="text-xl w-8 text-center">{cat.icon}</span>
+                        <CategoryIcon category={cat} size={36} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">
                             {e.description || cat.label}
@@ -128,7 +194,7 @@ export function HomePage() {
           </div>
         ) : (
           <div className="text-center py-12 text-gray-400">
-            <p className="text-4xl mb-2">📭</p>
+            <Inbox size={40} className="mx-auto mb-2" strokeWidth={1.5} />
             <p className="text-sm">No hay gastos este mes</p>
           </div>
         )}

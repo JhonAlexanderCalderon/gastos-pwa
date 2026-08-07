@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Link2, Heart } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { createCouple, joinCouple } from '../firebase/firestore'
 import { Button } from '../components/ui/Button'
@@ -11,7 +12,7 @@ export function CoupleSetupPage() {
   const { appUser } = useApp()
   const navigate = useNavigate()
   const [tab, setTab] = useState('create')
-  const [currency, setCurrency] = useState(appUser?.currency ?? 'MXN')
+  const [currency, setCurrency] = useState(appUser?.currency ?? 'AUD')
   const [code, setCode] = useState('')
   const [createdCouple, setCreatedCouple] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -37,13 +38,15 @@ export function CoupleSetupPage() {
 
   if (createdCouple) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-sm text-center">
-          <div className="text-5xl mb-4">🔗</div>
+          <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-amber-100 flex items-center justify-center">
+            <Link2 size={26} color="#B45309" />
+          </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">¡Grupo creado!</h2>
           <p className="text-gray-500 text-sm mb-6">Comparte este código con tu pareja</p>
           <Card className="p-6 mb-6">
-            <p className="text-4xl font-bold tracking-widest text-violet-700 mb-2">
+            <p className="text-4xl font-bold tracking-widest text-gray-900 mb-2">
               {createdCouple.inviteCode}
             </p>
             <p className="text-xs text-gray-400">Código de invitación</p>
@@ -57,19 +60,21 @@ export function CoupleSetupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="text-5xl mb-3">💑</div>
+          <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-amber-100 flex items-center justify-center">
+            <Heart size={24} color="#B45309" />
+          </div>
           <h1 className="text-2xl font-bold text-gray-900">Vincular pareja</h1>
         </div>
 
-        <div className="flex rounded-2xl bg-gray-200 p-1 mb-6">
+        <div className="flex rounded-2xl bg-gray-100 p-1 mb-6">
           {['create', 'join'].map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${tab === t ? 'bg-white shadow text-violet-700' : 'text-gray-500'}`}
+              className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${tab === t ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}
             >
               {t === 'create' ? 'Crear grupo' : 'Unirme'}
             </button>
@@ -83,7 +88,7 @@ export function CoupleSetupPage() {
               <select
                 value={currency}
                 onChange={e => setCurrency(e.target.value)}
-                className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-violet-500"
+                className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
               >
                 {CURRENCIES.map(c => (
                   <option key={c.code} value={c.code}>{c.label}</option>

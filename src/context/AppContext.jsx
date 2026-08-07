@@ -3,14 +3,23 @@ import {
   GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged,
 } from 'firebase/auth'
 import { auth } from '../firebase/config'
-import { saveUser, watchUser, watchCouple } from '../firebase/firestore'
+import {
+  saveUser, watchUser, watchCouple,
+  watchRecurring, applyRecurringExpense, addExpense,
+} from '../firebase/firestore'
+import { monthKey } from '../utils/balance'
 
 const Ctx = createContext(null)
+
+function generateId() {
+  return crypto.randomUUID()
+}
 
 export function AppProvider({ children }) {
   const [firebaseUser, setFirebaseUser] = useState(undefined) // undefined = loading
   const [appUser, setAppUser] = useState(null)
   const [couple, setCouple] = useState(null)
+  const [recurring, setRecurring] = useState([])
 
   // Auth state
   useEffect(() => {
@@ -32,11 +41,47 @@ export function AppProvider({ children }) {
     return watchCouple(appUser.coupleId, c => setCouple(c))
   }, [appUser?.coupleId])
 
+  // Watch scheduled/recurring expense templates
+  useEffect(() => {
+    if (!couple?.id) { setRecurring([]); return }
+    return watchRecurring(couple.id, setRecurring)
+  }, [couple?.id])
+
+  // Auto-apply active templates on/after day 1 of the month.
+  // Idempotent (deterministic expense id), so this safely self-stabilizes
+  // even if it re-runs or fires on both partners' devices at once.
+  useEffect(() => {
+    if (!couple?.id) return
+    const month = monthKey()
+    for (const r of recurring) {
+      if (r.active && r.lastAppliedMonth !== month) {
+        applyRecurringExpense({ ...r, coupleId: couple.id }, month)
+      }
+    }
+  }, [couple?.id, recurring])
+
+  async function payRecurringNow(r) {
+    const d = new Date()
+    await addExpense({
+      id: generateId(),
+      coupleId: couple.id,
+      paidBy: r.payerId,
+      paidByName: r.payerName,
+      amount: r.amount,
+      category: r.category,
+      description: r.label || '',
+      date: d,
+      month: monthKey(d),
+      createdAt: new Date(),
+      recurringId: r.id,
+    })
+  }
+
   async function signInWithGoogle() {
     const provider = new GoogleAuthProvider()
     const result = await signInWithPopup(auth, provider)
     const { uid, displayName, email, photoURL } = result.user
-    await saveUser({ uid, name: displayName ?? '', email, photoUrl: photoURL ?? '', coupleId: null, currency: 'MXN' })
+    await saveUser({ uid, name: displayName ?? '', email, photoUrl: photoURL ?? '', coupleId: null, currency: 'AUD' })
   }
 
   async function signOut() {
@@ -48,7 +93,10 @@ export function AppProvider({ children }) {
   const loading = firebaseUser === undefined
 
   return (
-    <Ctx.Provider value={{ firebaseUser, appUser, couple, loading, signInWithGoogle, signOut }}>
+    <Ctx.Provider value={{
+      firebaseUser, appUser, couple, loading, recurring,
+      signInWithGoogle, signOut, payRecurringNow,
+    }}>
       {children}
     </Ctx.Provider>
   )

@@ -14,7 +14,7 @@ export default defineConfig({
         name: 'Gastos Pareja',
         short_name: 'Gastos',
         description: 'Gestiona los gastos del hogar juntos',
-        theme_color: '#6750A4',
+        theme_color: '#111827',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',

@@ -10,7 +10,7 @@ export function OnboardingPage() {
   const { firebaseUser } = useApp()
   const navigate = useNavigate()
   const [name, setName] = useState(firebaseUser?.displayName ?? '')
-  const [currency, setCurrency] = useState('MXN')
+  const [currency, setCurrency] = useState('AUD')
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e) {
@@ -22,10 +22,12 @@ export function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="text-5xl mb-3">👋</div>
+          <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-amber-100 flex items-center justify-center text-2xl">
+            👋
+          </div>
           <h1 className="text-2xl font-bold text-gray-900">¡Hola!</h1>
           <p className="text-gray-500 text-sm mt-1">Cuéntanos un poco sobre ti</p>
         </div>
@@ -44,7 +46,7 @@ export function OnboardingPage() {
             <select
               value={currency}
               onChange={e => setCurrency(e.target.value)}
-              className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100"
+              className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
             >
               {CURRENCIES.map(c => (
                 <option key={c.code} value={c.code}>{c.label}</option>

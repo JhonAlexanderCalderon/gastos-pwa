@@ -95,6 +95,48 @@ export function watchMonthExpenses(coupleId, month, cb) {
   )
 }
 
+// ─── RECURRING (gastos programados) ──────────────────────
+
+export function saveRecurring(coupleId, recurring) {
+  const ref = doc(db, 'couples', coupleId, 'recurring', recurring.id)
+  return setDoc(ref, recurring, { merge: true })
+}
+
+export function deleteRecurring(coupleId, recurringId) {
+  return deleteDoc(doc(db, 'couples', coupleId, 'recurring', recurringId))
+}
+
+export function watchRecurring(coupleId, cb) {
+  return onSnapshot(collection(db, 'couples', coupleId, 'recurring'), snap =>
+    cb(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+  )
+}
+
+// Idempotent: deterministic expense id means re-running for the same
+// recurring+month never creates a duplicate, even if both partners'
+// clients trigger the auto-apply at the same time.
+export async function applyRecurringExpense(recurring, month) {
+  const expenseRef = doc(db, 'couples', recurring.coupleId, 'expenses', `recurring_${recurring.id}_${month}`)
+  await setDoc(expenseRef, {
+    id: expenseRef.id,
+    coupleId: recurring.coupleId,
+    paidBy: recurring.payerId,
+    paidByName: recurring.payerName,
+    amount: recurring.amount,
+    category: recurring.category,
+    description: recurring.label || '',
+    date: new Date(),
+    month,
+    createdAt: serverTimestamp(),
+    recurringId: recurring.id,
+  })
+  await setDoc(
+    doc(db, 'couples', recurring.coupleId, 'recurring', recurring.id),
+    { lastAppliedMonth: month },
+    { merge: true }
+  )
+}
+
 // ─── SETTLEMENTS ──────────────────────────────────────────
 
 export async function saveSettlement(coupleId, settlement) {

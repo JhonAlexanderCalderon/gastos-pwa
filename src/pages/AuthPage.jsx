@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Wallet } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { Button } from '../components/ui/Button'
 import { Spinner } from '../components/ui/Spinner'
@@ -21,23 +22,25 @@ export function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-violet-700 to-violet-500 flex flex-col items-center justify-center p-6 text-white">
+    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-6 text-white">
       <div className="mb-10 text-center">
-        <div className="text-6xl mb-4">💰</div>
+        <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-amber-500 flex items-center justify-center">
+          <Wallet size={30} color="#111827" strokeWidth={2.2} />
+        </div>
         <h1 className="text-3xl font-bold mb-2">Gastos Pareja</h1>
-        <p className="text-violet-200 text-sm max-w-xs">
+        <p className="text-gray-400 text-sm max-w-xs">
           Gestiona los gastos del hogar juntos, sin complicaciones
         </p>
       </div>
 
-      <div className="w-full max-w-xs bg-white/10 rounded-3xl p-6 backdrop-blur-sm">
+      <div className="w-full max-w-xs bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
         {error && (
-          <p className="text-red-200 text-sm text-center mb-4">{error}</p>
+          <p className="text-red-300 text-sm text-center mb-4">{error}</p>
         )}
         <Button
           onClick={handleSignIn}
           disabled={loading}
-          className="w-full bg-white text-violet-700 hover:bg-violet-50"
+          className="w-full bg-white text-gray-900 hover:bg-gray-100"
         >
           {loading ? <Spinner size="sm" /> : (
             <>

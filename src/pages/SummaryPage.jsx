@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { watchMonthExpenses, saveSettlement, getSettlement, watchSettlements } from '../firebase/firestore'
 import { BottomNav } from '../components/BottomNav'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
-import { getCategoryById, CATEGORIES } from '../utils/categories'
+import { CategoryIcon } from '../components/ui/CategoryIcon'
+import { CATEGORIES } from '../utils/categories'
 import { formatAmount } from '../utils/currency'
 import { calcBalance, monthKey, monthLabel, prevMonth, nextMonth } from '../utils/balance'
 
@@ -17,7 +19,7 @@ export function SummaryPage() {
   const [closing, setClosing] = useState(false)
   const [confirm, setConfirm] = useState(false)
 
-  const currency = couple?.currency ?? appUser?.currency ?? 'MXN'
+  const currency = couple?.currency ?? appUser?.currency ?? 'AUD'
   const isCurrentMonth = month === monthKey()
 
   useEffect(() => {
@@ -68,15 +70,19 @@ export function SummaryPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
-      <div className="bg-violet-700 text-white px-5 pt-12 pb-6">
+      <div className="bg-white border-b border-gray-100 px-5 pt-12 pb-5">
         <div className="flex items-center justify-between">
-          <button onClick={() => setMonth(prevMonth(month))} className="text-violet-200 text-xl p-1">‹</button>
-          <h2 className="text-lg font-semibold capitalize">{monthLabel(month)}</h2>
+          <button onClick={() => setMonth(prevMonth(month))} className="text-amber-600 p-1">
+            <ChevronLeft size={22} />
+          </button>
+          <h2 className="text-lg font-semibold text-gray-900 capitalize">{monthLabel(month)}</h2>
           <button
             onClick={() => setMonth(nextMonth(month))}
             disabled={isCurrentMonth}
-            className="text-violet-200 text-xl p-1 disabled:opacity-30"
-          >›</button>
+            className="text-amber-600 p-1 disabled:opacity-30"
+          >
+            <ChevronRight size={22} />
+          </button>
         </div>
       </div>
 
@@ -125,7 +131,7 @@ export function SummaryPage() {
                   <div key={cat.id}>
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-base">{cat.icon}</span>
+                        <CategoryIcon category={cat} size={26} />
                         <span className="text-sm text-gray-700">{cat.label}</span>
                       </div>
                       <div className="text-right">
@@ -151,9 +157,9 @@ export function SummaryPage() {
         )}
 
         {confirm && (
-          <Card className="p-5 bg-violet-50">
-            <p className="text-sm font-semibold text-violet-900 mb-1">¿Cerrar {monthLabel(month)}?</p>
-            <p className="text-xs text-violet-700 mb-4">
+          <Card className="p-5 bg-amber-50">
+            <p className="text-sm font-semibold text-amber-900 mb-1">¿Cerrar {monthLabel(month)}?</p>
+            <p className="text-xs text-amber-700 mb-4">
               {balance.status === 'even'
                 ? 'Están al corriente, no hay deuda.'
                 : balance.status === 'owes'
