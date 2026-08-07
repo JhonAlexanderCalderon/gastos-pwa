@@ -2,14 +2,17 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, Copy, Plus, Trash2 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
-import { saveUser, saveRecurring, deleteRecurring, updateCoupleCurrency } from '../firebase/firestore'
+import { saveUser, saveRecurring, deleteRecurring, updateCouple } from '../firebase/firestore'
 import { BottomNav } from '../components/BottomNav'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { CategoryIcon } from '../components/ui/CategoryIcon'
-import { CURRENCIES, formatAmount } from '../utils/currency'
+import { Avatar } from '../components/ui/Avatar'
+import { CURRENCIES, formatAmount, getCurrencySymbol } from '../utils/currency'
 import { CATEGORIES, getCategoryById } from '../utils/categories'
+
+const RENTA_DEFAULT_FALLBACK = 650
 
 function generateId() {
   return crypto.randomUUID()
@@ -29,10 +32,12 @@ export function SettingsPage() {
   const [newLabel, setNewLabel] = useState('')
   const [newPayerId, setNewPayerId] = useState(appUser?.uid ?? '')
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+  const [rentaSaved, setRentaSaved] = useState(false)
 
   const currency = couple?.currency ?? appUser?.currency ?? 'AUD'
   const partnerId = couple?.user1Id === appUser?.uid ? couple?.user2Id : couple?.user1Id
   const partnerName = couple?.user1Id === appUser?.uid ? couple?.user2Name : couple?.user1Name
+  const partnerPhoto = couple?.user1Id === appUser?.uid ? couple?.user2PhotoUrl : couple?.user1PhotoUrl
 
   async function handleSaveName() {
     if (!name.trim()) return
@@ -47,7 +52,15 @@ export function SettingsPage() {
     await saveUser({ uid: appUser.uid, currency: value })
     // couple.currency is what's actually used to format amounts app-wide,
     // so it must be kept in sync too (not just the personal fallback).
-    if (couple?.id) await updateCoupleCurrency(couple.id, value)
+    if (couple?.id) await updateCouple(couple.id, { currency: value })
+  }
+
+  async function handleRentaDefaultBlur(e) {
+    const amount = parseFloat(e.target.value)
+    if (!amount || amount <= 0 || amount === (couple?.rentaDefaultAmount ?? RENTA_DEFAULT_FALLBACK)) return
+    await updateCouple(couple.id, { rentaDefaultAmount: amount })
+    setRentaSaved(true)
+    setTimeout(() => setRentaSaved(false), 1500)
   }
 
   function copyCode() {
@@ -102,13 +115,7 @@ export function SettingsPage() {
         <Card className="p-5">
           <p className="text-xs text-gray-400 mb-3">Perfil</p>
           <div className="flex items-center gap-3 mb-4">
-            {appUser?.photoUrl ? (
-              <img src={appUser.photoUrl} alt="" className="w-12 h-12 rounded-full object-cover" />
-            ) : (
-              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-800 font-bold text-lg">
-                {appUser?.name?.[0] ?? '?'}
-              </div>
-            )}
+            <Avatar src={appUser?.photoUrl} name={appUser?.name} size={48} />
             <div>
               <p className="font-semibold text-gray-900">{appUser?.name}</p>
               <p className="text-xs text-gray-400">{appUser?.email}</p>
@@ -151,6 +158,27 @@ export function SettingsPage() {
             ))}
           </select>
         </Card>
+
+        {/* Renta default amount */}
+        {couple && (
+          <Card className="p-5">
+            <p className="text-xs text-gray-400 mb-1">Valor por defecto de Renta</p>
+            <p className="text-xs text-gray-400 mb-3">Se precarga al agregar un gasto de Renta, para que solo tengas que guardar.</p>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400 text-sm">{getCurrencySymbol(currency)}</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min="0.01"
+                defaultValue={couple?.rentaDefaultAmount ?? RENTA_DEFAULT_FALLBACK}
+                onBlur={handleRentaDefaultBlur}
+                className="flex-1 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-amber-500"
+              />
+              {rentaSaved && <Check size={18} className="text-green-600 shrink-0" />}
+            </div>
+          </Card>
+        )}
 
         {/* Scheduled expenses */}
         {couple && (
@@ -267,9 +295,7 @@ export function SettingsPage() {
           <Card className="p-5">
             <p className="text-xs text-gray-400 mb-3">Pareja</p>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 font-bold">
-                {partnerName?.[0] ?? '?'}
-              </div>
+              <Avatar src={partnerPhoto} name={partnerName} size={40} />
               <div>
                 <p className="font-medium text-gray-900">{partnerName || 'Esperando pareja...'}</p>
                 <p className="text-xs text-gray-400">Pareja vinculada</p>

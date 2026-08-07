@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, UtensilsCrossed, Wrench } from 'lucide-react'
 import { useApp } from '../context/AppContext'
@@ -29,6 +29,16 @@ export function AddExpensePage() {
 
   const currency = couple?.currency ?? appUser?.currency ?? 'AUD'
   const symbol = getCurrencySymbol(currency)
+
+  // Categories with a configured preset (currently just Renta) prefill the
+  // amount so the whole flow is "pick category, hit save". Deliberately
+  // keyed only on `category` — if it also watched `amount` it would
+  // re-stomp the field every time the user cleared it to type a new value.
+  useEffect(() => {
+    if (getCategoryById(category).hasPreset && !amount) {
+      setAmount(String(couple?.rentaDefaultAmount ?? 650))
+    }
+  }, [category])
 
   async function handleSubmit(e) {
     e.preventDefault()

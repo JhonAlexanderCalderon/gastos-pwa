@@ -7,6 +7,7 @@ import { BottomNav } from '../components/BottomNav'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { CategoryIcon } from '../components/ui/CategoryIcon'
+import { Avatar } from '../components/ui/Avatar'
 import { getCategoryById, CATEGORIES } from '../utils/categories'
 import { formatAmount } from '../utils/currency'
 import { calcBalance, monthKey, monthLabel, prevMonth, nextMonth } from '../utils/balance'
@@ -50,6 +51,7 @@ export function HomePage() {
   const balance = calcBalance(expenses, appUser?.uid)
   const currency = couple?.currency ?? appUser?.currency ?? 'AUD'
   const partnerName = couple?.user1Id === appUser?.uid ? couple?.user2Name : couple?.user1Name
+  const partnerPhoto = couple?.user1Id === appUser?.uid ? couple?.user2PhotoUrl : couple?.user1PhotoUrl
   const isCurrentMonth = month === monthKey()
   const quickCategories = QUICK_ADD_IDS.map(id => CATEGORIES.find(c => c.id === id)).filter(Boolean)
 
@@ -98,11 +100,17 @@ export function HomePage() {
         {/* Totals */}
         <div className="grid grid-cols-2 gap-3">
           <Card className="p-4">
-            <p className="text-xs text-gray-400 mb-1">Tú pagaste</p>
+            <div className="flex items-center gap-2 mb-1">
+              <Avatar src={appUser?.photoUrl} name={appUser?.name} size={20} />
+              <p className="text-xs text-gray-400">Tú pagaste</p>
+            </div>
             <p className="text-lg font-bold text-gray-900">{formatAmount(balance.myTotal, currency)}</p>
           </Card>
           <Card className="p-4">
-            <p className="text-xs text-gray-400 mb-1">{partnerName || 'Pareja'} pagó</p>
+            <div className="flex items-center gap-2 mb-1">
+              <Avatar src={partnerPhoto} name={partnerName} size={20} />
+              <p className="text-xs text-gray-400">{partnerName || 'Pareja'} pagó</p>
+            </div>
             <p className="text-lg font-bold text-gray-900">{formatAmount(balance.partnerTotal, currency)}</p>
           </Card>
         </div>

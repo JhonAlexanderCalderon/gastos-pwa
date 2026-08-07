@@ -31,14 +31,16 @@ function generateCode() {
   return code
 }
 
-export async function createCouple({ user1Id, user1Name, currency }) {
+export async function createCouple({ user1Id, user1Name, user1PhotoUrl, currency }) {
   const ref = doc(collection(db, 'couples'))
   const couple = {
     id: ref.id,
     user1Id,
     user1Name,
+    user1PhotoUrl: user1PhotoUrl ?? '',
     user2Id: '',
     user2Name: '',
+    user2PhotoUrl: '',
     currency,
     inviteCode: generateCode(),
     createdAt: serverTimestamp(),
@@ -48,7 +50,7 @@ export async function createCouple({ user1Id, user1Name, currency }) {
   return couple
 }
 
-export async function joinCouple({ inviteCode, user2Id, user2Name }) {
+export async function joinCouple({ inviteCode, user2Id, user2Name, user2PhotoUrl }) {
   const q = query(
     collection(db, 'couples'),
     where('inviteCode', '==', inviteCode.toUpperCase()),
@@ -59,7 +61,7 @@ export async function joinCouple({ inviteCode, user2Id, user2Name }) {
       unsub()
       if (snap.empty) return resolve(null)
       const ref = snap.docs[0].ref
-      await updateDoc(ref, { user2Id, user2Name })
+      await updateDoc(ref, { user2Id, user2Name, user2PhotoUrl: user2PhotoUrl ?? '' })
       await setDoc(doc(db, 'users', user2Id), { coupleId: snap.docs[0].id }, { merge: true })
       const updated = await getDoc(ref)
       resolve({ id: updated.id, ...updated.data() })
@@ -73,8 +75,11 @@ export function watchCouple(coupleId, cb) {
   )
 }
 
-export function updateCoupleCurrency(coupleId, currency) {
-  return updateDoc(doc(db, 'couples', coupleId), { currency })
+// Partial update of the shared couple doc (currency, rentaDefaultAmount, etc).
+// users/{uid} security rules only allow reading your own doc, so anything
+// the partner needs to see (photo, name, currency...) is denormalized here.
+export function updateCouple(coupleId, fields) {
+  return updateDoc(doc(db, 'couples', coupleId), fields)
 }
 
 // ─── EXPENSES ─────────────────────────────────────────────

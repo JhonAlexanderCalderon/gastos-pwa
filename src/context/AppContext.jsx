@@ -4,7 +4,7 @@ import {
 } from 'firebase/auth'
 import { auth } from '../firebase/config'
 import {
-  saveUser, watchUser, watchCouple,
+  saveUser, watchUser, watchCouple, updateCouple,
   watchRecurring, applyRecurringExpense, addExpense,
 } from '../firebase/firestore'
 import { monthKey } from '../utils/balance'
@@ -40,6 +40,17 @@ export function AppProvider({ children }) {
     if (!appUser?.coupleId) { setCouple(null); return }
     return watchCouple(appUser.coupleId, c => setCouple(c))
   }, [appUser?.coupleId])
+
+  // Keep the denormalized photo on the couple doc in sync with the Google
+  // profile photo (users/{uid} isn't readable by the partner, so their
+  // avatar has to live on the shared couple doc instead).
+  useEffect(() => {
+    if (!couple?.id || !appUser?.photoUrl) return
+    const mySlot = couple.user1Id === appUser.uid ? 'user1PhotoUrl' : 'user2PhotoUrl'
+    if (couple[mySlot] !== appUser.photoUrl) {
+      updateCouple(couple.id, { [mySlot]: appUser.photoUrl })
+    }
+  }, [couple, appUser?.uid, appUser?.photoUrl])
 
   // Watch scheduled/recurring expense templates
   useEffect(() => {

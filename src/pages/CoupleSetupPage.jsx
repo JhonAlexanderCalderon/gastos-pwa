@@ -21,7 +21,7 @@ export function CoupleSetupPage() {
   async function handleCreate(e) {
     e.preventDefault()
     setLoading(true)
-    const c = await createCouple({ user1Id: appUser.uid, user1Name: appUser.name, currency })
+    const c = await createCouple({ user1Id: appUser.uid, user1Name: appUser.name, user1PhotoUrl: appUser.photoUrl, currency })
     setCreatedCouple(c)
     setLoading(false)
   }
@@ -30,7 +30,7 @@ export function CoupleSetupPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const c = await joinCouple({ inviteCode: code, user2Id: appUser.uid, user2Name: appUser.name })
+    const c = await joinCouple({ inviteCode: code, user2Id: appUser.uid, user2Name: appUser.name, user2PhotoUrl: appUser.photoUrl })
     setLoading(false)
     if (!c) return setError('Código no válido. Verifica con tu pareja.')
     navigate('/home')
