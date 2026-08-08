@@ -36,9 +36,12 @@ export function AddExpensePage() {
   // amount so the whole flow is "pick category, hit save". Deliberately
   // keyed only on `category` — if it also watched `amount` it would
   // re-stomp the field every time the user cleared it to type a new value.
+  // Sets the DOM value directly too since the field below is uncontrolled.
   useEffect(() => {
     if (getCategoryById(category).hasPreset && !amount) {
-      setAmount(String(couple?.rentaDefaultAmount ?? 650))
+      const preset = String(couple?.rentaDefaultAmount ?? 650)
+      setAmount(preset)
+      if (amountRef.current) amountRef.current.value = preset
     }
   }, [category])
 
@@ -56,7 +59,9 @@ export function AddExpensePage() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    const parsed = parseFloat(amount)
+    // Read straight from the DOM (the field is uncontrolled) rather than
+    // trusting React state, which only ever mirrors it best-effort.
+    const parsed = parseFloat(sanitizeDecimal(amountRef.current?.value ?? amount))
     if (!parsed || parsed <= 0) return
     setLoading(true)
     const d = new Date(date + 'T12:00:00')
@@ -96,9 +101,21 @@ export function AddExpensePage() {
               ref={amountRef}
               type="text"
               inputMode="decimal"
-              value={amount}
-              onChange={e => setAmount(sanitizeDecimal(e.target.value))}
-              onBlur={e => setAmount(sanitizeDecimal(e.target.value))}
+              defaultValue=""
+              // Uncontrolled on purpose: a React-controlled <input> that
+              // rewrites its own value on every keystroke can desync an
+              // Android numeric keyboard's internal composition buffer,
+              // which then replays a stray leftover digit right when the
+              // keyboard closes. Letting the DOM own the value while we
+              // just mirror it into state sidesteps that entirely.
+              onChange={e => {
+                e.target.value = sanitizeDecimal(e.target.value)
+                setAmount(e.target.value)
+              }}
+              onBlur={e => {
+                e.target.value = sanitizeDecimal(e.target.value)
+                setAmount(e.target.value)
+              }}
               placeholder="0.00"
               className="text-5xl font-bold text-gray-900 bg-transparent outline-none w-48 text-center"
               required

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, Copy, Plus, Trash2 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
@@ -29,7 +29,7 @@ export function SettingsPage() {
 
   const [showForm, setShowForm] = useState(false)
   const [newCategory, setNewCategory] = useState('renta')
-  const [newAmount, setNewAmount] = useState('')
+  const newAmountRef = useRef(null)
   const [newLabel, setNewLabel] = useState('')
   const [newPayerId, setNewPayerId] = useState(appUser?.uid ?? '')
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
@@ -77,7 +77,7 @@ export function SettingsPage() {
 
   async function handleAddRecurring(e) {
     e.preventDefault()
-    const amount = parseFloat(newAmount)
+    const amount = parseFloat(sanitizeDecimal(newAmountRef.current?.value ?? ''))
     if (!amount || amount <= 0 || !newPayerId) return
     const payerName = newPayerId === appUser.uid ? appUser.name : partnerName
     await saveRecurring(couple.id, {
@@ -91,7 +91,7 @@ export function SettingsPage() {
       lastAppliedMonth: null,
       createdAt: new Date(),
     })
-    setNewAmount('')
+    if (newAmountRef.current) newAmountRef.current.value = ''
     setNewLabel('')
     setShowForm(false)
   }
@@ -255,10 +255,11 @@ export function SettingsPage() {
                   maxLength={40}
                 />
                 <Input
+                  ref={newAmountRef}
                   type="text"
                   inputMode="decimal"
-                  value={newAmount}
-                  onChange={e => setNewAmount(sanitizeDecimal(e.target.value))}
+                  defaultValue=""
+                  onChange={e => { e.target.value = sanitizeDecimal(e.target.value) }}
                   placeholder="Monto"
                   required
                 />
