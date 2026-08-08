@@ -194,7 +194,7 @@ export function SettingsPage() {
                 </button>
               )}
             </div>
-            <p className="text-xs text-gray-400 mb-3">Se agregan automáticamente el día 1 de cada mes, y puedes registrarlos manualmente cuando quieras desde Inicio.</p>
+            <p className="text-xs text-gray-400 mb-3">Se agregan automáticamente al comenzar cada mes.</p>
 
             {recurring.length > 0 && (
               <div className="flex flex-col gap-1 mb-3">

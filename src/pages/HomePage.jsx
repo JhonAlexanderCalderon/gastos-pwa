@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Plus, Check, Inbox } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Inbox } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { watchMonthExpenses, watchAllExpenses } from '../firebase/firestore'
 import { BottomNav } from '../components/BottomNav'
@@ -43,12 +43,11 @@ function BalanceCard({ status, diff, currency, onViewHistoric }) {
 }
 
 export function HomePage() {
-  const { appUser, couple, recurring, payRecurringNow } = useApp()
+  const { appUser, couple } = useApp()
   const navigate = useNavigate()
   const [month, setMonth] = useState(monthKey())
   const [expenses, setExpenses] = useState([])
   const [allExpenses, setAllExpenses] = useState([])
-  const [justPaid, setJustPaid] = useState(null)
 
   useEffect(() => {
     if (!couple?.id) return
@@ -69,12 +68,6 @@ export function HomePage() {
   const partnerPhoto = couple?.user1Id === appUser?.uid ? couple?.user2PhotoUrl : couple?.user1PhotoUrl
   const isCurrentMonth = month === monthKey()
   const quickCategories = QUICK_ADD_IDS.map(id => CATEGORIES.find(c => c.id === id)).filter(Boolean)
-
-  async function handleQuickPay(r) {
-    await payRecurringNow(r)
-    setJustPaid(r.id)
-    setTimeout(() => setJustPaid(null), 1500)
-  }
 
   // Group recent expenses by date
   const recent = expenses.slice(0, 10)
@@ -156,39 +149,6 @@ export function HomePage() {
             ))}
           </div>
         </div>
-
-        {/* Recurring quick pay */}
-        {recurring.filter(r => r.active).length > 0 && (
-          <div>
-            <p className="text-sm font-semibold text-gray-500 mb-2 px-1">Pagos rápidos</p>
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-              {recurring.filter(r => r.active).map(r => {
-                const cat = getCategoryById(r.category)
-                const paid = justPaid === r.id
-                return (
-                  <button
-                    key={r.id}
-                    onClick={() => handleQuickPay(r)}
-                    disabled={paid}
-                    className={`flex items-center gap-2 min-w-fit pl-2 pr-3 py-2 rounded-2xl border transition-colors ${paid ? 'bg-green-50 border-green-200' : 'bg-white border-gray-100'}`}
-                  >
-                    {paid ? (
-                      <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-                        <Check size={18} color="#15803d" />
-                      </div>
-                    ) : (
-                      <CategoryIcon category={cat} size={36} />
-                    )}
-                    <div className="text-left">
-                      <p className="text-xs font-medium text-gray-900 leading-tight">{r.label || cat.label}</p>
-                      <p className="text-xs text-gray-400 leading-tight">{formatAmount(r.amount, currency)}</p>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )}
 
         {/* Recent expenses */}
         {Object.keys(grouped).length > 0 ? (

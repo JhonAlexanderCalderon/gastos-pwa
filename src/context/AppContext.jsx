@@ -5,16 +5,12 @@ import {
 import { auth } from '../firebase/config'
 import {
   saveUser, watchUser, watchCouple, updateCouple,
-  watchRecurring, applyRecurringExpense, addExpense,
+  watchRecurring, applyRecurringExpense,
 } from '../firebase/firestore'
 import { monthKey } from '../utils/balance'
 import { CURRENCIES } from '../utils/currency'
 
 const Ctx = createContext(null)
-
-function generateId() {
-  return crypto.randomUUID()
-}
 
 export function AppProvider({ children }) {
   const [firebaseUser, setFirebaseUser] = useState(undefined) // undefined = loading
@@ -72,7 +68,8 @@ export function AppProvider({ children }) {
     return watchRecurring(couple.id, setRecurring)
   }, [couple?.id])
 
-  // Auto-apply active templates on/after day 1 of the month.
+  // Auto-apply active templates the first time the app is opened in a new
+  // month (in practice, within the first few days for an app used daily).
   // Idempotent (deterministic expense id), so this safely self-stabilizes
   // even if it re-runs or fires on both partners' devices at once.
   useEffect(() => {
@@ -84,23 +81,6 @@ export function AppProvider({ children }) {
       }
     }
   }, [couple?.id, recurring])
-
-  async function payRecurringNow(r) {
-    const d = new Date()
-    await addExpense({
-      id: generateId(),
-      coupleId: couple.id,
-      paidBy: r.payerId,
-      paidByName: r.payerName,
-      amount: r.amount,
-      category: r.category,
-      description: r.label || '',
-      date: d,
-      month: monthKey(d),
-      createdAt: new Date(),
-      recurringId: r.id,
-    })
-  }
 
   async function signInWithGoogle() {
     const provider = new GoogleAuthProvider()
@@ -120,7 +100,7 @@ export function AppProvider({ children }) {
   return (
     <Ctx.Provider value={{
       firebaseUser, appUser, couple, loading, recurring,
-      signInWithGoogle, signOut, payRecurringNow,
+      signInWithGoogle, signOut,
     }}>
       {children}
     </Ctx.Provider>

@@ -8,7 +8,7 @@ import { CategoryIcon } from '../components/ui/CategoryIcon'
 import { CATEGORIES } from '../utils/categories'
 import { formatAmount } from '../utils/currency'
 import { calcBalance } from '../utils/balance'
-import { monthlyAverageTotal, monthlyAverageByCategory } from '../utils/stats'
+import { monthlyAverageTotal, weeklyAverageTotal, monthlyAverageByCategory } from '../utils/stats'
 
 export function HistoricPage() {
   const { appUser, couple } = useApp()
@@ -24,6 +24,7 @@ export function HistoricPage() {
   const partnerName = couple?.user1Id === appUser?.uid ? couple?.user2Name : couple?.user1Name
   const balance = calcBalance(expenses, appUser?.uid)
   const avgTotal = monthlyAverageTotal(expenses)
+  const avgWeekly = weeklyAverageTotal(expenses)
   const avgByCategory = monthlyAverageByCategory(expenses)
 
   const ranked = CATEGORIES
@@ -72,10 +73,19 @@ export function HistoricPage() {
               </div>
             </Card>
 
-            {/* Monthly average */}
+            {/* Monthly / weekly average */}
             <Card className="p-5">
-              <p className="text-xs text-gray-400 mb-1">Promedio de gasto mensual</p>
-              <p className="text-2xl font-bold text-gray-900">{formatAmount(avgTotal, currency)}</p>
+              <p className="text-xs text-gray-400 mb-3">Promedio de gasto</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Mensual</p>
+                  <p className="text-xl font-bold text-gray-900">{formatAmount(avgTotal, currency)}</p>
+                </div>
+                <div className="border-l border-gray-100 pl-4">
+                  <p className="text-xs text-gray-400 mb-1">Semanal</p>
+                  <p className="text-xl font-bold text-gray-900">{formatAmount(avgWeekly, currency)}</p>
+                </div>
+              </div>
             </Card>
 
             {/* Ranking by category */}

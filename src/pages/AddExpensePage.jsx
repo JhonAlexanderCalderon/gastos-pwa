@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, UtensilsCrossed, Wrench } from 'lucide-react'
 import { useApp } from '../context/AppContext'
@@ -27,6 +27,7 @@ export function AddExpensePage() {
   const [description, setDescription] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [loading, setLoading] = useState(false)
+  const amountRef = useRef(null)
 
   const currency = couple?.currency ?? appUser?.currency ?? 'AUD'
   const symbol = getCurrencySymbol(currency)
@@ -40,6 +41,18 @@ export function AddExpensePage() {
       setAmount(String(couple?.rentaDefaultAmount ?? 650))
     }
   }, [category])
+
+  // Focus (and open the keyboard) a beat after mount instead of using the
+  // native `autoFocus`. Landing here is usually the result of a tap on Home
+  // (a quick-access category, "Agregar gasto"...); if the keyboard opens
+  // immediately, that same tap/finger-lift can register as a stray touch
+  // on the freshly-focused numeric field once it animates into place,
+  // which reads as an extra unwanted digit. Waiting lets the navigation
+  // gesture fully settle first.
+  useEffect(() => {
+    const t = setTimeout(() => amountRef.current?.focus(), 350)
+    return () => clearTimeout(t)
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -80,14 +93,15 @@ export function AddExpensePage() {
           <div className="flex items-center gap-2">
             <span className="text-3xl font-bold text-gray-400">{symbol}</span>
             <input
+              ref={amountRef}
               type="text"
               inputMode="decimal"
               value={amount}
               onChange={e => setAmount(sanitizeDecimal(e.target.value))}
+              onBlur={e => setAmount(sanitizeDecimal(e.target.value))}
               placeholder="0.00"
               className="text-5xl font-bold text-gray-900 bg-transparent outline-none w-48 text-center"
               required
-              autoFocus
             />
           </div>
         </div>
