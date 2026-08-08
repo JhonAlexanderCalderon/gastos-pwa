@@ -27,6 +27,7 @@ export function AddExpensePage() {
   const [description, setDescription] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [loading, setLoading] = useState(false)
+  const [amountFocused, setAmountFocused] = useState(false)
   const amountRef = useRef(null)
 
   const currency = couple?.currency ?? appUser?.currency ?? 'AUD'
@@ -94,7 +95,23 @@ export function AddExpensePage() {
       <form onSubmit={handleSubmit} className="px-4 py-5 flex flex-col gap-5">
         {/* Amount */}
         <div className="flex flex-col items-center bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-          <p className="text-sm text-gray-400 mb-2">¿Cuánto gastaste?</p>
+          <div className="w-full flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-400">¿Cuánto gastaste?</p>
+            {/* The phone's own "hide keyboard" arrow sits right next to the
+                1/4/7 keys, so a slightly-off tap can add a stray digit right
+                as it closes — nothing on our side can fix that, since the
+                keyboard is drawn by the OS, not this page. This button is a
+                safe alternative: tap here instead of that corner arrow. */}
+            {amountFocused && (
+              <button
+                type="button"
+                onClick={() => amountRef.current?.blur()}
+                className="text-xs font-semibold text-amber-700 bg-amber-100 rounded-lg px-2.5 py-1"
+              >
+                Listo
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <span className="text-3xl font-bold text-gray-400">{symbol}</span>
             <input
@@ -112,9 +129,11 @@ export function AddExpensePage() {
                 e.target.value = sanitizeDecimal(e.target.value)
                 setAmount(e.target.value)
               }}
+              onFocus={() => setAmountFocused(true)}
               onBlur={e => {
                 e.target.value = sanitizeDecimal(e.target.value)
                 setAmount(e.target.value)
+                setAmountFocused(false)
               }}
               placeholder="0.00"
               className="text-5xl font-bold text-gray-900 bg-transparent outline-none w-48 text-center"

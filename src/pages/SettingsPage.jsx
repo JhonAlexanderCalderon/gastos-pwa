@@ -34,6 +34,9 @@ export function SettingsPage() {
   const [newPayerId, setNewPayerId] = useState(appUser?.uid ?? '')
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const [rentaSaved, setRentaSaved] = useState(false)
+  const [rentaFocused, setRentaFocused] = useState(false)
+  const rentaDefaultRef = useRef(null)
+  const [amountFocused, setAmountFocused] = useState(false)
 
   const currency = couple?.currency ?? appUser?.currency ?? 'AUD'
   const partnerId = couple?.user1Id === appUser?.uid ? couple?.user2Id : couple?.user1Id
@@ -163,16 +166,29 @@ export function SettingsPage() {
         {/* Renta default amount */}
         {couple && (
           <Card className="p-5">
-            <p className="text-xs text-gray-400 mb-1">Valor por defecto de Renta</p>
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs text-gray-400">Valor por defecto de Renta</p>
+              {rentaFocused && (
+                <button
+                  type="button"
+                  onClick={() => rentaDefaultRef.current?.blur()}
+                  className="text-xs font-semibold text-amber-700 bg-amber-100 rounded-lg px-2.5 py-1"
+                >
+                  Listo
+                </button>
+              )}
+            </div>
             <p className="text-xs text-gray-400 mb-3">Se precarga al agregar un gasto de Renta, para que solo tengas que guardar.</p>
             <div className="flex items-center gap-2">
               <span className="text-gray-400 text-sm">{getCurrencySymbol(currency)}</span>
               <input
+                ref={rentaDefaultRef}
                 type="text"
                 inputMode="decimal"
                 defaultValue={couple?.rentaDefaultAmount ?? RENTA_DEFAULT_FALLBACK}
                 onChange={e => { e.target.value = sanitizeDecimal(e.target.value) }}
-                onBlur={handleRentaDefaultBlur}
+                onFocus={() => setRentaFocused(true)}
+                onBlur={e => { setRentaFocused(false); handleRentaDefaultBlur(e) }}
                 className="flex-1 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-amber-500"
               />
               {rentaSaved && <Check size={18} className="text-green-600 shrink-0" />}
@@ -254,15 +270,30 @@ export function SettingsPage() {
                   placeholder={`Nombre (ej: ${getCategoryById(newCategory).label})`}
                   maxLength={40}
                 />
-                <Input
-                  ref={newAmountRef}
-                  type="text"
-                  inputMode="decimal"
-                  defaultValue=""
-                  onChange={e => { e.target.value = sanitizeDecimal(e.target.value) }}
-                  placeholder="Monto"
-                  required
-                />
+                <div>
+                  {amountFocused && (
+                    <div className="flex justify-end mb-1">
+                      <button
+                        type="button"
+                        onClick={() => newAmountRef.current?.blur()}
+                        className="text-xs font-semibold text-amber-700 bg-amber-100 rounded-lg px-2.5 py-1"
+                      >
+                        Listo
+                      </button>
+                    </div>
+                  )}
+                  <Input
+                    ref={newAmountRef}
+                    type="text"
+                    inputMode="decimal"
+                    defaultValue=""
+                    onChange={e => { e.target.value = sanitizeDecimal(e.target.value) }}
+                    onFocus={() => setAmountFocused(true)}
+                    onBlur={() => setAmountFocused(false)}
+                    placeholder="Monto"
+                    required
+                  />
+                </div>
                 <div className="flex gap-2">
                   <button
                     type="button"
