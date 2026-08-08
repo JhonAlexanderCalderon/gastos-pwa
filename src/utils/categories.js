@@ -21,6 +21,14 @@ export const CATEGORY_GROUPS = [
   { label: 'Gastos fijos y otros', ids: ['ocio', 'online', 'gasolina', 'renta', 'servicios', 'otro'] },
 ]
 
+// Categories combined into a single "Canasta familiar" row in the grouped
+// summary — the everyday grocery/household spend, seen as one number.
+export const CANASTA_FAMILIAR_IDS = ['woolworths', 'aldi', 'coles', 'frutiveg', 'bws']
+
+export const CANASTA_FAMILIAR_CATEGORY = {
+  id: 'canasta-familiar', label: 'Canasta familiar', kind: 'icon', icon: 'ShoppingCart', color: '#16A34A',
+}
+
 export function getCategoryById(id) {
   return CATEGORIES.find(c => c.id === id) ?? CATEGORIES[CATEGORIES.length - 1]
 }

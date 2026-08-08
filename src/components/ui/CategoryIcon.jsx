@@ -1,8 +1,8 @@
 import {
-  Apple, PartyPopper, ShoppingBag, Fuel, Home, Zap, MoreHorizontal,
+  Apple, PartyPopper, ShoppingBag, ShoppingCart, Fuel, Home, Zap, MoreHorizontal,
 } from 'lucide-react'
 
-const ICONS = { Apple, PartyPopper, ShoppingBag, Fuel, Home, Zap, MoreHorizontal }
+const ICONS = { Apple, PartyPopper, ShoppingBag, ShoppingCart, Fuel, Home, Zap, MoreHorizontal }
 
 export function CategoryIcon({ category, size = 40 }) {
   const style = { width: size, height: size }

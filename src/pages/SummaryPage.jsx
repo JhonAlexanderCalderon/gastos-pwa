@@ -5,7 +5,7 @@ import { watchMonthExpenses, watchAllExpenses } from '../firebase/firestore'
 import { BottomNav } from '../components/BottomNav'
 import { Card } from '../components/ui/Card'
 import { CategoryIcon } from '../components/ui/CategoryIcon'
-import { CATEGORIES } from '../utils/categories'
+import { CATEGORIES, CANASTA_FAMILIAR_IDS, CANASTA_FAMILIAR_CATEGORY } from '../utils/categories'
 import { formatAmount } from '../utils/currency'
 import { calcBalance, monthKey, monthLabel, prevMonth, nextMonth } from '../utils/balance'
 import { monthlyAverageTotal, monthlyAverageByCategory } from '../utils/stats'
@@ -57,6 +57,23 @@ export function SummaryPage() {
     const total = expenses.filter(e => e.category === cat.id).reduce((s, e) => s + e.amount, 0)
     return { ...cat, total }
   }).filter(c => c.total > 0).sort((a, b) => b.total - a.total)
+
+  // Same breakdown, but with the grocery/household categories folded into
+  // a single "Canasta familiar" row for a quick frequent-spend overview.
+  const canastaTotal = expenses
+    .filter(e => CANASTA_FAMILIAR_IDS.includes(e.category))
+    .reduce((s, e) => s + e.amount, 0)
+  const canastaAvg = CANASTA_FAMILIAR_IDS.reduce((s, id) => s + (avgByCategory[id] ?? 0), 0)
+  const grouped = [
+    ...CATEGORIES
+      .filter(c => !CANASTA_FAMILIAR_IDS.includes(c.id))
+      .map(cat => ({
+        ...cat,
+        total: expenses.filter(e => e.category === cat.id).reduce((s, e) => s + e.amount, 0),
+        avg: avgByCategory[cat.id],
+      })),
+    { ...CANASTA_FAMILIAR_CATEGORY, total: canastaTotal, avg: canastaAvg },
+  ].filter(c => c.total > 0).sort((a, b) => b.total - a.total)
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
@@ -135,6 +152,36 @@ export function SummaryPage() {
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Trend current={cat.total} average={avgByCategory[cat.id]} size={12} />
+                        <span className="text-sm font-medium text-gray-900">{formatAmount(cat.total, currency)}</span>
+                        <span className="text-xs text-gray-400 ml-1">{pct.toFixed(0)}%</span>
+                      </div>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: cat.color }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </Card>
+        )}
+
+        {/* Grouped overview (groceries collapsed into one row) */}
+        {grouped.length > 0 && (
+          <Card className="p-5">
+            <p className="text-xs text-gray-400 mb-3">Gastos generales agrupados</p>
+            <div className="flex flex-col gap-3">
+              {grouped.map(cat => {
+                const pct = balance.total > 0 ? (cat.total / balance.total) * 100 : 0
+                return (
+                  <div key={cat.id}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <CategoryIcon category={cat} size={26} />
+                        <span className="text-sm text-gray-700">{cat.label}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Trend current={cat.total} average={cat.avg} size={12} />
                         <span className="text-sm font-medium text-gray-900">{formatAmount(cat.total, currency)}</span>
                         <span className="text-xs text-gray-400 ml-1">{pct.toFixed(0)}%</span>
                       </div>
