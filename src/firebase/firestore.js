@@ -104,6 +104,18 @@ export function watchMonthExpenses(coupleId, month, cb) {
   )
 }
 
+// All expenses ever recorded for the couple (no month filter) — used for
+// the historical balance/averages. Trivial volume for a 2-person app.
+export function watchAllExpenses(coupleId, cb) {
+  const q = query(
+    collection(db, 'couples', coupleId, 'expenses'),
+    orderBy('date', 'desc')
+  )
+  return onSnapshot(q, snap =>
+    cb(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+  )
+}
+
 // ─── RECURRING (gastos programados) ──────────────────────
 
 export function saveRecurring(coupleId, recurring) {
@@ -144,28 +156,4 @@ export async function applyRecurringExpense(recurring, month) {
     { lastAppliedMonth: month },
     { merge: true }
   )
-}
-
-// ─── SETTLEMENTS ──────────────────────────────────────────
-
-export async function saveSettlement(coupleId, settlement) {
-  return setDoc(
-    doc(db, 'couples', coupleId, 'settlements', settlement.month),
-    settlement
-  )
-}
-
-export function watchSettlements(coupleId, cb) {
-  const q = query(
-    collection(db, 'couples', coupleId, 'settlements'),
-    orderBy('closedAt', 'desc')
-  )
-  return onSnapshot(q, snap =>
-    cb(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-  )
-}
-
-export async function getSettlement(coupleId, month) {
-  const snap = await getDoc(doc(db, 'couples', coupleId, 'settlements', month))
-  return snap.exists() ? snap.data() : null
 }

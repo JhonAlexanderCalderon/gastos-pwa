@@ -9,6 +9,7 @@ import { AddExpensePage } from './pages/AddExpensePage'
 import { HistoryPage } from './pages/HistoryPage'
 import { SummaryPage } from './pages/SummaryPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { HistoricPage } from './pages/HistoricPage'
 
 function AppRoutes() {
   const { firebaseUser, appUser, couple, loading } = useApp()
@@ -32,6 +33,7 @@ function AppRoutes() {
       <Route path="/history"     element={<HistoryPage />} />
       <Route path="/summary"     element={<SummaryPage />} />
       <Route path="/settings"    element={<SettingsPage />} />
+      <Route path="/historico"   element={<HistoricPage />} />
       <Route path="*"            element={<Navigate to="/home" replace />} />
     </Routes>
   )

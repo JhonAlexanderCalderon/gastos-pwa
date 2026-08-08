@@ -11,6 +11,7 @@ import { CategoryIcon } from '../components/ui/CategoryIcon'
 import { Avatar } from '../components/ui/Avatar'
 import { CURRENCIES, formatAmount, getCurrencySymbol } from '../utils/currency'
 import { CATEGORIES, getCategoryById } from '../utils/categories'
+import { sanitizeDecimal } from '../utils/number'
 
 const RENTA_DEFAULT_FALLBACK = 650
 
@@ -167,11 +168,10 @@ export function SettingsPage() {
             <div className="flex items-center gap-2">
               <span className="text-gray-400 text-sm">{getCurrencySymbol(currency)}</span>
               <input
-                type="number"
+                type="text"
                 inputMode="decimal"
-                step="0.01"
-                min="0.01"
                 defaultValue={couple?.rentaDefaultAmount ?? RENTA_DEFAULT_FALLBACK}
+                onChange={e => { e.target.value = sanitizeDecimal(e.target.value) }}
                 onBlur={handleRentaDefaultBlur}
                 className="flex-1 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-amber-500"
               />
@@ -255,12 +255,10 @@ export function SettingsPage() {
                   maxLength={40}
                 />
                 <Input
-                  type="number"
+                  type="text"
                   inputMode="decimal"
-                  step="0.01"
-                  min="0.01"
                   value={newAmount}
-                  onChange={e => setNewAmount(e.target.value)}
+                  onChange={e => setNewAmount(sanitizeDecimal(e.target.value))}
                   placeholder="Monto"
                   required
                 />

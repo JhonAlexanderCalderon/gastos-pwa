@@ -6,6 +6,7 @@ import { addExpense } from '../firebase/firestore'
 import { CATEGORY_GROUPS, getCategoryById } from '../utils/categories'
 import { getCurrencySymbol } from '../utils/currency'
 import { monthKey } from '../utils/balance'
+import { sanitizeDecimal } from '../utils/number'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { CategoryIcon } from '../components/ui/CategoryIcon'
@@ -79,12 +80,10 @@ export function AddExpensePage() {
           <div className="flex items-center gap-2">
             <span className="text-3xl font-bold text-gray-400">{symbol}</span>
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
-              step="0.01"
-              min="0.01"
               value={amount}
-              onChange={e => setAmount(e.target.value)}
+              onChange={e => setAmount(sanitizeDecimal(e.target.value))}
               placeholder="0.00"
               className="text-5xl font-bold text-gray-900 bg-transparent outline-none w-48 text-center"
               required

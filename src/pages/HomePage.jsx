@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Plus, Check, Inbox } from 'lucide-react'
 import { useApp } from '../context/AppContext'
-import { watchMonthExpenses } from '../firebase/firestore'
+import { watchMonthExpenses, watchAllExpenses } from '../firebase/firestore'
 import { BottomNav } from '../components/BottomNav'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -14,7 +14,7 @@ import { calcBalance, monthKey, monthLabel, prevMonth, nextMonth } from '../util
 
 const QUICK_ADD_IDS = ['aldi', 'coles', 'woolworths', 'gasolina', 'otro']
 
-function BalanceCard({ status, diff, currency }) {
+function BalanceCard({ status, diff, currency, onViewHistoric }) {
   const configs = {
     even:  { bg: 'bg-green-50',  text: 'text-green-700',  label: 'Están al corriente' },
     owed:  { bg: 'bg-green-50',  text: 'text-green-700',  label: 'Te deben' },
@@ -32,6 +32,12 @@ function BalanceCard({ status, diff, currency }) {
       {status === 'even' && (
         <p className={`text-2xl font-bold ${c.text}`}>✓</p>
       )}
+      <button
+        onClick={onViewHistoric}
+        className={`flex items-center gap-1 text-xs font-medium mt-3 ${c.text}`}
+      >
+        Ver histórico completo <ChevronRight size={14} />
+      </button>
     </Card>
   )
 }
@@ -41,6 +47,7 @@ export function HomePage() {
   const navigate = useNavigate()
   const [month, setMonth] = useState(monthKey())
   const [expenses, setExpenses] = useState([])
+  const [allExpenses, setAllExpenses] = useState([])
   const [justPaid, setJustPaid] = useState(null)
 
   useEffect(() => {
@@ -48,6 +55,14 @@ export function HomePage() {
     return watchMonthExpenses(couple.id, month, setExpenses)
   }, [couple?.id, month])
 
+  useEffect(() => {
+    if (!couple?.id) return
+    return watchAllExpenses(couple.id, setAllExpenses)
+  }, [couple?.id])
+
+  // The top balance card is the all-time consolidated balance (who owes
+  // whom overall), independent of which month is selected below.
+  const historicBalance = calcBalance(allExpenses, appUser?.uid)
   const balance = calcBalance(expenses, appUser?.uid)
   const currency = couple?.currency ?? appUser?.currency ?? 'AUD'
   const partnerName = couple?.user1Id === appUser?.uid ? couple?.user2Name : couple?.user1Name
@@ -95,7 +110,12 @@ export function HomePage() {
 
       <div className="px-4 pt-4 flex flex-col gap-4">
         {/* Balance */}
-        <BalanceCard status={balance.status} diff={balance.diff} currency={currency} />
+        <BalanceCard
+          status={historicBalance.status}
+          diff={historicBalance.diff}
+          currency={currency}
+          onViewHistoric={() => navigate('/historico')}
+        />
 
         {/* Totals */}
         <div className="grid grid-cols-2 gap-3">
