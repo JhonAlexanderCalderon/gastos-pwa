@@ -15,6 +15,19 @@ function generateId() {
   return crypto.randomUUID()
 }
 
+// A local YYYY-MM-DD string. Unlike `new Date().toISOString().split('T')[0]`,
+// this does NOT shift to UTC first — it reads the device's local
+// year/month/day directly, so it matches what the user actually sees on
+// their clock (relevant in positive-UTC-offset zones like Australia, where
+// toISOString() can report "yesterday" during local morning hours).
+function todayLocal() {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export function AddExpensePage() {
   const { appUser, couple } = useApp()
   const navigate = useNavigate()
@@ -25,7 +38,7 @@ export function AddExpensePage() {
   const [category, setCategory] = useState(initialCategory)
   const [subtype, setSubtype] = useState('comida')
   const [description, setDescription] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [date, setDate] = useState(todayLocal())
   const [loading, setLoading] = useState(false)
   const [amountFocused, setAmountFocused] = useState(false)
   const amountRef = useRef(null)
@@ -207,7 +220,7 @@ export function AddExpensePage() {
           type="date"
           value={date}
           onChange={e => setDate(e.target.value)}
-          max={new Date().toISOString().split('T')[0]}
+          max={todayLocal()}
         />
 
         <Button type="submit" disabled={loading || !amount} className="w-full mt-2">
