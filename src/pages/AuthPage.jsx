@@ -1,60 +1,232 @@
-import { useState } from 'react'
-import { Wallet } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { ChevronLeft, UtensilsCrossed, Wrench } from 'lucide-react'
 import { useApp } from '../context/AppContext'
+import { addExpense } from '../firebase/firestore'
+import { CATEGORY_GROUPS, getCategoryById } from '../utils/categories'
+import { getCurrencySymbol } from '../utils/currency'
+import { monthKey } from '../utils/balance'
+import { sanitizeDecimal } from '../utils/number'
 import { Button } from '../components/ui/Button'
-import { Spinner } from '../components/ui/Spinner'
+import { Input } from '../components/ui/Input'
+import { CategoryIcon } from '../components/ui/CategoryIcon'
 
-export function AuthPage() {
-  const { signInWithGoogle } = useApp()
+function generateId() {
+  return crypto.randomUUID()
+}
+
+// A local YYYY-MM-DD string. Unlike `new Date().toISOString().split('T')[0]`,
+// this does NOT shift to UTC first — it reads the device's local
+// year/month/day directly, so it matches what the user actually sees on
+// their clock (relevant in positive-UTC-offset zones like Australia, where
+// toISOString() can report "yesterday" during local morning hours).
+function todayLocal() {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+export function AddExpensePage() {
+  const { appUser, couple } = useApp()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const catParam = searchParams.get('cat')
+  const initialCategory = catParam ? getCategoryById(catParam).id : 'aldi'
+  const [amount, setAmount] = useState('')
+  const [category, setCategory] = useState(initialCategory)
+  const [subtype, setSubtype] = useState('comida')
+  const [description, setDescription] = useState('')
+  const [date, setDate] = useState(todayLocal())
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [amountFocused, setAmountFocused] = useState(false)
+  const amountRef = useRef(null)
 
-  async function handleSignIn() {
-    setLoading(true)
-    setError('')
-    try {
-      await signInWithGoogle()
-    } catch {
-      setError('No se pudo iniciar sesión. Intenta de nuevo.')
-    } finally {
-      setLoading(false)
+  const currency = couple?.currency ?? appUser?.currency ?? 'AUD'
+  const symbol = getCurrencySymbol(currency)
+
+  // Categories with a configured preset (currently just Renta) prefill the
+  // amount so the whole flow is "pick category, hit save". Deliberately
+  // keyed only on `category` — if it also watched `amount` it would
+  // re-stomp the field every time the user cleared it to type a new value.
+  // Sets the DOM value directly too since the field below is uncontrolled.
+  useEffect(() => {
+    if (getCategoryById(category).hasPreset && !amount) {
+      const preset = String(couple?.rentaDefaultAmount ?? 650)
+      setAmount(preset)
+      if (amountRef.current) amountRef.current.value = preset
     }
+  }, [category])
+
+  // Focus (and open the keyboard) a beat after mount instead of using the
+  // native `autoFocus`. Landing here is usually the result of a tap on Home
+  // (a quick-access category, "Agregar gasto"...); if the keyboard opens
+  // immediately, that same tap/finger-lift can register as a stray touch
+  // on the freshly-focused numeric field once it animates into place,
+  // which reads as an extra unwanted digit. Waiting lets the navigation
+  // gesture fully settle first.
+  useEffect(() => {
+    const t = setTimeout(() => amountRef.current?.focus(), 350)
+    return () => clearTimeout(t)
+  }, [])
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    // Read straight from the DOM (the field is uncontrolled) rather than
+    // trusting React state, which only ever mirrors it best-effort.
+    const parsed = parseFloat(sanitizeDecimal(amountRef.current?.value ?? amount))
+    if (!parsed || parsed <= 0) return
+    setLoading(true)
+    const d = new Date(date + 'T12:00:00')
+    await addExpense({
+      id: generateId(),
+      coupleId: couple.id,
+      paidBy: appUser.uid,
+      paidByName: appUser.name,
+      amount: parsed,
+      category,
+      subtype: category === 'ocio' ? subtype : null,
+      description: description.trim(),
+      date: d,
+      month: monthKey(d),
+      createdAt: new Date(),
+    })
+    navigate('/home')
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-6 text-white">
-      <div className="mb-10 text-center">
-        <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-amber-500 flex items-center justify-center">
-          <Wallet size={30} color="#111827" strokeWidth={2.2} />
-        </div>
-        <h1 className="text-3xl font-bold mb-2">Gastos Pareja</h1>
-        <p className="text-gray-400 text-sm max-w-xs">
-          Gestiona los gastos del hogar juntos, sin complicaciones
-        </p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-100 px-5 pt-12 pb-5 flex items-center gap-3">
+        <button onClick={() => navigate(-1)} className="text-gray-500">
+          <ChevronLeft size={22} />
+        </button>
+        <h1 className="text-lg font-semibold text-gray-900">Agregar gasto</h1>
       </div>
 
-      <div className="w-full max-w-xs bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
-        {error && (
-          <p className="text-red-300 text-sm text-center mb-4">{error}</p>
+      <form onSubmit={handleSubmit} className="px-4 py-5 flex flex-col gap-5">
+        {/* Amount */}
+        <div className="flex flex-col items-center bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+          <div className="w-full flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-400">¿Cuánto gastaste?</p>
+            {/* The phone's own "hide keyboard" arrow sits right next to the
+                1/4/7 keys, so a slightly-off tap can add a stray digit right
+                as it closes — nothing on our side can fix that, since the
+                keyboard is drawn by the OS, not this page. This button is a
+                safe alternative: tap here instead of that corner arrow. */}
+            {amountFocused && (
+              <button
+                type="button"
+                onClick={() => amountRef.current?.blur()}
+                className="text-xs font-semibold text-amber-700 bg-amber-100 rounded-lg px-2.5 py-1"
+              >
+                Listo
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-3xl font-bold text-gray-400">{symbol}</span>
+            <input
+              ref={amountRef}
+              type="text"
+              inputMode="decimal"
+              defaultValue=""
+              // Uncontrolled on purpose: a React-controlled <input> that
+              // rewrites its own value on every keystroke can desync an
+              // Android numeric keyboard's internal composition buffer,
+              // which then replays a stray leftover digit right when the
+              // keyboard closes. Letting the DOM own the value while we
+              // just mirror it into state sidesteps that entirely.
+              onChange={e => {
+                e.target.value = sanitizeDecimal(e.target.value)
+                setAmount(e.target.value)
+              }}
+              onFocus={() => setAmountFocused(true)}
+              onBlur={e => {
+                e.target.value = sanitizeDecimal(e.target.value)
+                setAmount(e.target.value)
+                setAmountFocused(false)
+              }}
+              placeholder="0.00"
+              className="text-5xl font-bold text-gray-900 bg-transparent outline-none w-48 text-center"
+              required
+            />
+          </div>
+        </div>
+
+        {/* Categories */}
+        <div className="flex flex-col gap-4">
+          {CATEGORY_GROUPS.map(group => (
+            <div key={group.label}>
+              <p className="text-sm font-medium text-gray-700 mb-2">{group.label}</p>
+              <div className="grid grid-cols-5 gap-2">
+                {group.ids.map(id => {
+                  const cat = getCategoryById(id)
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setCategory(cat.id)}
+                      className={`flex flex-col items-center gap-1 p-1.5 rounded-2xl text-xs transition-all ${
+                        category === cat.id ? 'bg-amber-50 ring-2 ring-amber-400' : ''
+                      }`}
+                    >
+                      <CategoryIcon category={cat} size={44} />
+                      <span className="truncate w-full text-center text-gray-600">{cat.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Ocio subtype */}
+        {category === 'ocio' && (
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-2">¿Comida o servicio?</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setSubtype('comida')}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-medium ${subtype === 'comida' ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600'}`}
+              >
+                <UtensilsCrossed size={16} /> Comida
+              </button>
+              <button
+                type="button"
+                onClick={() => setSubtype('servicio')}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-medium ${subtype === 'servicio' ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600'}`}
+              >
+                <Wrench size={16} /> Servicio
+              </button>
+            </div>
+          </div>
         )}
-        <Button
-          onClick={handleSignIn}
-          disabled={loading}
-          className="w-full bg-white text-gray-900 hover:bg-gray-100"
-        >
-          {loading ? <Spinner size="sm" /> : (
-            <>
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              Continuar con Google
-            </>
-          )}
+
+        {/* Description */}
+        <Input
+          label="Descripción (opcional)"
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          placeholder="Ej: Supermercado semanal"
+          maxLength={80}
+        />
+
+        {/* Date */}
+        <Input
+          label="Fecha"
+          type="date"
+          value={date}
+          onChange={e => setDate(e.target.value)}
+          max={todayLocal()}
+        />
+
+        <Button type="submit" disabled={loading || !amount} className="w-full mt-2">
+          {loading ? 'Guardando...' : 'Guardar gasto'}
         </Button>
-      </div>
+      </form>
     </div>
   )
 }
