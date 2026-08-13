@@ -4,7 +4,7 @@ import {
 } from 'firebase/auth'
 import { auth } from '../firebase/config'
 import {
-  saveUser, watchUser, watchCouple, updateCouple,
+  saveUser, getUser, watchUser, watchCouple, updateCouple,
   watchRecurring, applyRecurringExpense,
 } from '../firebase/firestore'
 import { monthKey } from '../utils/balance'
@@ -86,7 +86,11 @@ export function AppProvider({ children }) {
     const provider = new GoogleAuthProvider()
     const result = await signInWithPopup(auth, provider)
     const { uid, displayName, email, photoURL } = result.user
-    await saveUser({ uid, name: displayName ?? '', email, photoUrl: photoURL ?? '', coupleId: null, currency: 'AUD' })
+    const existing = await getUser(uid)
+    await saveUser({
+      uid, name: displayName ?? '', email, photoUrl: photoURL ?? '',
+      ...(existing ? {} : { coupleId: null, currency: 'AUD' }),
+    })
   }
 
   async function signOut() {
